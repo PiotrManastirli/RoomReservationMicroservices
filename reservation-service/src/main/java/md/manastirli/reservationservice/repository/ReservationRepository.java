@@ -9,7 +9,11 @@ import java.util.List;
 
 public interface ReservationRepository extends JpaRepository<Reservation,Long> {
 
-//    Reservation findReservationByCheckInDateNotInAndAndCheckOutDateNotIn(LocalDate checkInDate, LocalDate checkOutDate);
+    List<Reservation> findAllByCheckInDateLessThanEqualAndCheckOutDateGreaterThanEqual(LocalDate endDate, LocalDate startDate);
+
+    List<Reservation> findAllByRoomNumber(Integer roomNumber);
+
+    List<Reservation> findAllByGuestName(String guestName);
     @Query("SELECT r FROM Reservation r WHERE r.roomNumber = :roomNumber " +
             "AND ((r.checkInDate >= :checkInDate AND r.checkInDate < :checkOutDate) " +
             "OR (r.checkOutDate > :checkInDate AND r.checkOutDate <= :checkOutDate))")

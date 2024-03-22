@@ -14,11 +14,12 @@ import md.manastirli.reservation.model.Room;
 import md.manastirli.reservation.repository.AmenityRepository;
 import md.manastirli.reservation.repository.PhotoRepository;
 import md.manastirli.reservation.repository.RoomRepository;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,6 +49,7 @@ public class RoomService {
     }
 
     public List<RoomResponse> getAllRooms() {
+
         List<Room> rooms = roomRepository.findAll();
         return rooms.stream().map(this::mapToRoomResponse).toList();
     }
@@ -104,7 +106,6 @@ public class RoomService {
         roomRepository.save(room);
     }
 
-
     public void removePhotoFromRoom(Long roomId, Long photoId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found with id: " + roomId));
@@ -117,7 +118,6 @@ public class RoomService {
         }
         roomRepository.save(room);
     }
-
     public void deleteRoom(Long roomId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found with id: " + roomId));
@@ -145,7 +145,6 @@ public class RoomService {
                     .collect(Collectors.toList()));
             room.setAmenities(amenities);
         }
-
         if (request.getPhotos() != null) {
             List<Photo> photos = photoRepository.findAllById(request.getPhotos()
                     .stream()
@@ -156,9 +155,25 @@ public class RoomService {
         roomRepository.save(room);
     }
 
-    public List<RoomResponse> getAllAvailableRooms() {
+    public List<RoomResponse> getAllAvailableRooms(LocalDate startDate, LocalDate endDate) {
         List<Room> rooms = roomRepository.findAll();
-        webClient.get()
-        return rooms.stream().map(this::mapToRoomResponse).toList();
+        List<Integer> occupiedRoomNumbers = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/reservation")
+                        .queryParam("startDate", startDate)
+                        .queryParam("endDate", endDate)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<Integer>>() {})
+                .block();
+        List<Room> availableRooms = rooms.stream()
+                .filter(room -> {
+                    assert occupiedRoomNumbers != null;
+                    return !occupiedRoomNumbers.contains(room.getNumber());
+                })
+                .toList();
+        return availableRooms.stream()
+                .map(this::mapToRoomResponse)
+                .collect(Collectors.toList());
     }
 }

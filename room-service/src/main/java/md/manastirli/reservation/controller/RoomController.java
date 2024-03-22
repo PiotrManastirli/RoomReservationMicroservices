@@ -37,7 +37,7 @@ public class RoomController {
     @ResponseStatus(HttpStatus.OK)
     public List<RoomResponse> getAllAvailableRooms(@RequestParam LocalDate startDate,
                                                    @RequestParam LocalDate endDate) {
-        return roomService.getAllAvailableRooms();
+        return roomService.getAllAvailableRooms(startDate, endDate);
     }
     @DeleteMapping("/{roomId}")
     public ResponseEntity<?> removeRoom(@PathVariable Long roomId) {
