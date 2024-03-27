@@ -21,6 +21,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +34,7 @@ public class RoomService {
 
     private final PhotoRepository photoRepository;
 
-    private final WebClient webClient;
+    private final WebClient.Builder webClientBuilder;
     public void addRoom(RoomRequest roomRequest){
         Room room = Room.builder()
                 .number(roomRequest.getNumber())
@@ -49,7 +50,6 @@ public class RoomService {
     }
 
     public List<RoomResponse> getAllRooms() {
-
         List<Room> rooms = roomRepository.findAll();
         return rooms.stream().map(this::mapToRoomResponse).toList();
     }
@@ -155,25 +155,36 @@ public class RoomService {
         roomRepository.save(room);
     }
 
-    public List<RoomResponse> getAllAvailableRooms(LocalDate startDate, LocalDate endDate) {
+    public List<RoomResponse> getAllAvailableRooms(LocalDate startDate, LocalDate endDate, Optional<List<Amenity>> amenities) {
         List<Room> rooms = roomRepository.findAll();
-        List<Integer> occupiedRoomNumbers = webClient.get()
+        List<Integer> occupiedRoomNumbers = webClientBuilder.build().get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/api/reservation")
+                        .path("http://reservation-service/api/reservation")
                         .queryParam("startDate", startDate)
                         .queryParam("endDate", endDate)
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<Integer>>() {})
                 .block();
+
         List<Room> availableRooms = rooms.stream()
                 .filter(room -> {
                     assert occupiedRoomNumbers != null;
                     return !occupiedRoomNumbers.contains(room.getNumber());
+                })
+                .filter(room -> {
+                    if (amenities.isPresent()) {
+                        return room.getAmenities().containsAll(amenities.get());
+                    } else {
+                        return true;
+                    }
                 })
                 .toList();
         return availableRooms.stream()
                 .map(this::mapToRoomResponse)
                 .collect(Collectors.toList());
     }
+
+
+
 }

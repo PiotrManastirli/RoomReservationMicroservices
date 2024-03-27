@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import md.manastirli.reservation.dto.RoomRequest;
 import md.manastirli.reservation.dto.RoomResponse;
 import md.manastirli.reservation.dto.RoomUpdateRequest;
+import md.manastirli.reservation.model.Amenity;
 import md.manastirli.reservation.services.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/room")
@@ -27,7 +29,7 @@ public class RoomController {
         roomService.addRoom(roomRequest);
     }
 
-    @GetMapping
+    @GetMapping("/all")
     @ResponseStatus(HttpStatus.OK)
     public List<RoomResponse> getAllRooms() {
         return roomService.getAllRooms();
@@ -36,9 +38,11 @@ public class RoomController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<RoomResponse> getAllAvailableRooms(@RequestParam LocalDate startDate,
-                                                   @RequestParam LocalDate endDate) {
-        return roomService.getAllAvailableRooms(startDate, endDate);
+                                                   @RequestParam LocalDate endDate,
+    @RequestParam(value = "amenities", required = false) Optional<List<Amenity>> optionalAmenities ) {
+        return roomService.getAllAvailableRooms(startDate, endDate, optionalAmenities);
     }
+
     @DeleteMapping("/{roomId}")
     public ResponseEntity<?> removeRoom(@PathVariable Long roomId) {
         roomService.deleteRoom(roomId);

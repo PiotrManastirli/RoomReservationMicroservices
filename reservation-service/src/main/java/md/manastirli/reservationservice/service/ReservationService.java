@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
-    private final WebClient webClient;
+    private final WebClient.Builder webClientBuilder;
 
     public void placeReservation(ReservationRequest reservationRequest) {
         List<Reservation> conflictingReservations = reservationRepository.findConflictingReservations(
@@ -62,35 +62,26 @@ public class ReservationService {
         if (!isRoomAvailable(reservation.getRoomNumber(), request.getCheckInDate(), request.getCheckOutDate())) {
             throw new BadRequestException("Room is not available for the requested dates.");
         }
-        // Check if number of guests does not exceed room capacity
         if (!isNumberOfGuestsValid(reservation.getRoomNumber(), request.getNumberOfGuests())) {
             throw new BadRequestException("Number of guests exceeds room capacity.");
         }
-
-        // Update reservation
         reservation.setCheckInDate(request.getCheckInDate());
         reservation.setCheckOutDate(request.getCheckOutDate());
         reservation.setNumberOfGuests(request.getNumberOfGuests());
         reservation.setGuestName(request.getGuestName());
         reservation.setContactInformation(request.getContactInformation());
-
         reservationRepository.save(reservation);
     }
 
     private boolean isRoomAvailable(int roomNumber, LocalDate checkInDate, LocalDate checkOutDate) {
-        ResponseEntity<Boolean> responseEntity = webClient.get()
-                .uri("/rooms/{roomNumber}/available?checkInDate={checkInDate}&checkOutDate={checkOutDate}",
-                        roomNumber, checkInDate, checkOutDate)
-                .retrieve()
-                .toEntity(Boolean.class)
-                .block();
-
-        return responseEntity != null && responseEntity.getBody() != null && responseEntity.getBody();
+        List<Reservation> conflictingReservations = reservationRepository
+                .findConflictingReservations(roomNumber, checkInDate, checkOutDate);
+        return conflictingReservations.isEmpty();
     }
 
     private boolean isNumberOfGuestsValid(int roomNumber, int numberOfGuests) {
-        ResponseEntity<Integer> responseEntity = webClient.get()
-                .uri("/rooms/{roomNumber}/capacity", roomNumber)
+        ResponseEntity<Integer> responseEntity = webClientBuilder.build().get()
+                .uri("http://room-service/api/room/{roomNumber}/capacity", roomNumber)
                 .retrieve()
                 .toEntity(Integer.class)
                 .block();

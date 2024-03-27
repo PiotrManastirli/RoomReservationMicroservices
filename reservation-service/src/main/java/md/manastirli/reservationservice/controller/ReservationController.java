@@ -22,7 +22,7 @@ public class ReservationController {
     @Autowired
     private final ReservationService reservationService;
 
-    private final WebClient webClient;
+
 
     @GetMapping("dateReservations")
     @ResponseStatus(HttpStatus.OK)
