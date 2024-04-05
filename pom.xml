@@ -17,10 +17,10 @@
     <modules>
         <module>room-service</module>
 		<module>reservation-service</module>
-        <module>users-service</module>
 		<module>discovery-server</module>
 		<module>api-gateway</module>
-	</modules>
+        <module>identity-service</module>
+    </modules>
     <properties>
 		<java.version>17</java.version>
 		<spring-cloud.version>2023.0.0</spring-cloud.version>
