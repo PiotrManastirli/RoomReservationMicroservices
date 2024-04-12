@@ -1,5 +1,8 @@
 package md.manastirli.reservationservice.controller;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.RequiredArgsConstructor;
 import md.manastirli.reservationservice.dto.ReservationRequest;
 import md.manastirli.reservationservice.dto.ReservationUpdateRequest;
@@ -14,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/reservation")
@@ -41,9 +45,15 @@ public class ReservationController {
 
 
     @PostMapping
-    public String placeReservation(@RequestBody ReservationRequest reservationRequest) {
-        reservationService.placeReservation(reservationRequest);
-        return "Reservation placed successfully!";
+    @CircuitBreaker(name = "inventory",fallbackMethod = "fallbackMethod")
+    @TimeLimiter(name = "inventory")
+    @Retry(name = "inventory")
+    public CompletableFuture<String> placeReservation(@RequestBody ReservationRequest reservationRequest) {
+        return CompletableFuture.supplyAsync(()->reservationService.placeReservation(reservationRequest));
+    }
+
+    public CompletableFuture<String> fallbackMethod(ReservationRequest reservationRequest, RuntimeException runtimeException){
+        return CompletableFuture.supplyAsync(()->"Oops! Something went wrong, please add reservation after some time!");
     }
 
     @DeleteMapping

@@ -1,15 +1,19 @@
 package md.manastirli.reservationservice.service;
 
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import md.manastirli.reservationservice.dto.ReservationRequest;
 import md.manastirli.reservationservice.dto.ReservationUpdateRequest;
+import md.manastirli.reservationservice.event.ReservationPlacedEvent;
 import md.manastirli.reservationservice.exceptions.NotFoundException;
 import md.manastirli.reservationservice.model.Reservation;
 import md.manastirli.reservationservice.repository.ReservationRepository;
 import md.manastirli.reservationservice.exceptions.BadRequestException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -25,8 +29,10 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final WebClient.Builder webClientBuilder;
+    private final Tracer tracer;
+    private final KafkaTemplate<String,ReservationPlacedEvent> kafkaTemplate;
 
-    public void placeReservation(ReservationRequest reservationRequest) {
+    public String placeReservation(ReservationRequest reservationRequest) {
         List<Reservation> conflictingReservations = reservationRepository.findConflictingReservations(
                 reservationRequest.getRoomNumber(), reservationRequest.getCheckInDate(), reservationRequest.getCheckOutDate());
         if (!conflictingReservations.isEmpty()) {
@@ -42,6 +48,8 @@ public class ReservationService {
         reservation.setRoomNumber(reservationRequest.getRoomNumber());
 //        reservation.setUserName();
         reservationRepository.save(reservation);
+        kafkaTemplate.send("notificationTopic",new ReservationPlacedEvent(reservation.getId()));
+        return "Reservation placed successfully!";
     }
 
 
@@ -80,6 +88,8 @@ public class ReservationService {
     }
 
     private boolean isNumberOfGuestsValid(int roomNumber, int numberOfGuests) {
+        Span roomServiceLookup = tracer.nextSpan().name("RoomServiceLookup");
+        try(Tracer.SpanInScope spanInScope = tracer.withSpan(roomServiceLookup.start())){
         ResponseEntity<Integer> responseEntity = webClientBuilder.build().get()
                 .uri("http://room-service/api/room/{roomNumber}/capacity", roomNumber)
                 .retrieve()
@@ -87,6 +97,9 @@ public class ReservationService {
                 .block();
 
         return responseEntity != null && responseEntity.getBody() != null && numberOfGuests <= responseEntity.getBody();
+    } finally {
+            roomServiceLookup.end();
+        }
     }
 
     public List<Integer> getAllReservations(LocalDate startDate, LocalDate endDate) {

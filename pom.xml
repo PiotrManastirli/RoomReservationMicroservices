@@ -20,7 +20,8 @@
 		<module>discovery-server</module>
 		<module>api-gateway</module>
         <module>identity-service</module>
-    </modules>
+		<module>notification-service</module>
+	</modules>
     <properties>
 		<java.version>17</java.version>
 		<spring-cloud.version>2023.0.0</spring-cloud.version>

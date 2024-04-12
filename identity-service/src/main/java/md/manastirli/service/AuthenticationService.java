@@ -1,31 +1,60 @@
 package md.manastirli.service;
 
-import md.manastirli.entity.UserCredentials;
-import md.manastirli.repository.UserCredentialRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import md.manastirli.dto.JwtAuthenticationResponse;
+import md.manastirli.dto.SignInRequest;
+import md.manastirli.dto.SignUpRequest;
+import md.manastirli.entity.Role;
+import md.manastirli.entity.User;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthenticationService {
-    @Autowired
-    private UserCredentialRepository repository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtService jwtService;
+    private final UserService userService;
+    private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
 
-    public String saveUser(UserCredentials userCredentials){
-        userCredentials.setPassword(passwordEncoder.encode(userCredentials.getPassword()));
-        repository.save(userCredentials);
-        return "User added to the system!";
+    /**
+     * Регистрация пользователя
+     *
+     * @param request данные пользователя
+     * @return токен
+     */
+    public JwtAuthenticationResponse signUp(SignUpRequest request) {
+
+        var user = User.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(Role.ROLE_USER)
+                .build();
+        userService.create(user);
+
+        var jwt = jwtService.generateToken(user);
+        return new JwtAuthenticationResponse(jwt);
     }
 
-    public String generateToken(String username){
-        return jwtService.generateToken(username);
-    }
+    /**
+     * Аутентификация пользователя
+     *
+     * @param request данные пользователя
+     * @return токен
+     */
+    public JwtAuthenticationResponse signIn(SignInRequest request) {
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+                request.getUsername(),
+                request.getPassword()
+        ));
+        var user = userService
+                .userDetailsService()
+                .loadUserByUsername(request.getUsername());
 
-    public void validateToken(String token) {
-        jwtService.validateToken(token);
+        var jwt = jwtService.generateToken(user);
+        return new JwtAuthenticationResponse(jwt);
     }
 }

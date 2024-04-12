@@ -31,21 +31,12 @@ public class RoomController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @CircuitBreaker(name = "inventory",fallbackMethod = "fallbackMethod")
-    @TimeLimiter(name = "inventory")
-    @Retry(name = "inventory")
     public void addRoom(@RequestBody RoomRequest roomRequest){
         roomService.addRoom(roomRequest);
     }
 
-    public CompletableFuture<String> fallbackMethod(RoomRequest roomRequest, RuntimeException runtimeException){
-        return CompletableFuture.supplyAsync(()->"Oops! Something went wrong, please add room after some time!");
-    }
-
     @GetMapping("/all")
     @ResponseStatus(HttpStatus.OK)
-    @CircuitBreaker(name = "inventory",fallbackMethod = "fallbackMethod")
-    @TimeLimiter(name = "inventory")
     public List<RoomResponse> getAllRooms() throws SQLException {
         return roomService.getAllRooms();
     }
@@ -53,8 +44,6 @@ public class RoomController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @CircuitBreaker(name = "inventory",fallbackMethod = "fallbackMethod")
-    @TimeLimiter(name = "inventory")
     public List<RoomResponse> getAllAvailableRooms(@RequestParam LocalDate startDate,
                                                    @RequestParam LocalDate endDate,
     @RequestParam(value = "amenities", required = false) Optional<List<Amenity>> optionalAmenities ) throws SQLException {

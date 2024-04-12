@@ -1,43 +1,34 @@
 package md.manastirli.controller;
 
-import md.manastirli.dto.AuthRequest;
-import md.manastirli.entity.UserCredentials;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import md.manastirli.dto.JwtAuthenticationResponse;
+import md.manastirli.dto.SignInRequest;
+import md.manastirli.dto.SignUpRequest;
 import md.manastirli.service.AuthenticationService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
+@Tag(name = "Аутентификация")
 public class AuthController {
-    @Autowired
-    private AuthenticationService authenticationService;
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationService authenticationService;
 
-    @PostMapping("/register")
-    public String addNewUser(@RequestBody UserCredentials user){
-        return authenticationService.saveUser(user);
+    @Operation(summary = "Регистрация пользователя")
+    @PostMapping("/sign-up")
+    @PermitAll
+    public JwtAuthenticationResponse signUp(@RequestBody @Valid SignUpRequest request) {
+        return authenticationService.signUp(request);
     }
 
-    @PostMapping("/token")
-    public String getToken(@RequestBody AuthRequest user){
-        Authentication authenticate = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getUsername(),user.getPassword()));
-        if(authenticate.isAuthenticated()){
-            return authenticationService.generateToken(user.getUsername());
-        } else {
-           throw new RuntimeException("Invalid Access");
-        }
+    @Operation(summary = "Авторизация пользователя")
+    @PostMapping("/sign-in")
+    @PermitAll
+    public JwtAuthenticationResponse signIn(@RequestBody @Valid SignInRequest request) {
+        return authenticationService.signIn(request);
     }
-
-    @GetMapping("/validate")
-    public String validateToken(@RequestParam("token") String token){
-         authenticationService.validateToken(token);
-         return "Token is valid!";
-    }
-
-
 }
