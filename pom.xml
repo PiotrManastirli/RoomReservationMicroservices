@@ -9,7 +9,7 @@
 		<relativePath/>
 	</parent>
 	<groupId>md.manastirli</groupId>
-	<artifactId>microservices-parent</artifactId>
+	<artifactId>microservices-main</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>microservices-parent</name>
