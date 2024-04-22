@@ -1,4 +1,5 @@
-FROM openjdk:17
+# Используйте подходящий базовый образ
+FROM openjdk:17-jdk
 
 # Установите рабочую директорию в контейнере
 WORKDIR /app
@@ -12,4 +13,5 @@ COPY src/main/resources/application-docker.properties /app/config/application-do
 # Установите переменную окружения для указания местоположения конфигурации
 ENV SPRING_CONFIG_LOCATION=file:/app/config/application-docker.properties
 
-ENTRYPOINT ["java","-jar","/app.jar"]
+# Запустите ваше приложение
+ENTRYPOINT ["java", "-jar", "app.jar"]
