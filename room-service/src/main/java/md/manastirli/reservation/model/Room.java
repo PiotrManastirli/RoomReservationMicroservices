@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.sql.Blob;
 import java.util.List;
 
 @AllArgsConstructor
@@ -32,14 +33,11 @@ public class Room {
     )
     private List<Amenity> amenities;
     private RoomStatus status;
-    @ManyToMany
-    @JoinTable(
-            name = "room_photo",
-            joinColumns = @JoinColumn(name = "room_id"),
-            inverseJoinColumns = @JoinColumn(name = "photo_id")
-    )
-    private List<Photo> photos;
-        public enum RoomType {
+    @Lob
+    private Blob photo;
+
+
+    public enum RoomType {
             STANDARD,
             LUXURY,
             APARTMENT

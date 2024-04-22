@@ -1,0 +1,195 @@
+---
+#version: '3.7'
+services:
+  ## MySQL Docker Compose Config
+  postgres-room:
+    container_name: postgres-room
+    image: postgres
+    environment:
+      POSTGRES_DB: room-service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    expose:
+      - "5431"
+    ports:
+      - "5431:5431"
+    command: -p 5431
+
+  postgres-reservation:
+    container_name: postgres-reservation
+    image: postgres
+    environment:
+      POSTGRES_DB: reservation-service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    expose:
+      - "5436"
+    ports:
+      - "5436:5436"
+    command: -p 5436
+    restart: unless-stopped
+
+  postgres-identity:
+    container_name: postgres-identity
+    image: postgres
+    environment:
+      POSTGRES_DB: identity-service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    expose:
+      - "5435"
+    ports:
+      - "5435:5435"
+    command: -p 5435
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: broker
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  ## Zipkin
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+
+  ## Eureka Server
+  discovery-server:
+    build:
+      context: ./discovery-server
+      dockerfile: Dockerfile
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - zipkin
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    image: piotrmanastirli/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY= TRACE
+    depends_on:
+      - zipkin
+      - discovery-server
+
+  ## Room-Service Docker Compose Config
+  room-service:
+    build:
+      context: ./room-service
+      dockerfile: Dockerfile
+    container_name: room-service
+    image: piotrmanastirli/room-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-room:5431/room-service
+    depends_on:
+      - postgres-room
+      - zipkin
+      - discovery-server
+      - api-gateway
+
+  ## Reservation-Service Docker Compose Config
+  reservation-service:
+    container_name: reservation-service
+    build:
+      context: ./reservation-service
+      dockerfile: Dockerfile
+    image: piotrmanastirli/reservation-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-reservation:5436/reservation-service
+    depends_on:
+      - postgres-reservation
+      - broker
+      - discovery-server
+      - api-gateway
+
+  ## Identity-Service Docker Compose Config
+  identity-service:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    container_name: identity-service
+    image: piotrmanastirli/identity-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-identity:5435/identity-service
+    depends_on:
+      - postgres-identity
+      - discovery-server
+      - api-gateway
+
+  ## Notification-Service Docker Compose Config
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    image: piotrmanastirli/notification-service:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - zipkin
+      - broker
+      - discovery-server
+      - api-gateway
+#
+#  ## Prometheus
+#  prometheus:
+#    image: prom/prometheus:v2.37.1
+#    container_name: prometheus
+#    restart: always
+#    ports:
+#      - "9090:9090"
+#    volumes:
+#      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+#    depends_on:
+#      - product-service
+#      - inventory-service
+#      - order-service
+#      - notification-service
+#
+#  grafana:
+#    image: grafana/grafana-oss:8.5.2
+#    container_name: grafana
+#    restart: always
+#    ports:
+#      - "3000:3000"
+#    links:
+#      - prometheus:prometheus
+#    volumes:
+#      - ./grafana:/var/lib/grafana
+#    environment:
+#      - GF_SECURITY_ADMIN_USER=admin
+#      - GF_SECURITY_ADMIN_PASSWORD=password

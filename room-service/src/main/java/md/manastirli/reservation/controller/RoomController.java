@@ -1,17 +1,25 @@
 package md.manastirli.reservation.controller;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import md.manastirli.reservation.dto.RoomRequest;
 import md.manastirli.reservation.dto.RoomResponse;
 import md.manastirli.reservation.dto.RoomUpdateRequest;
+import md.manastirli.reservation.exceptions.InternalServerException;
+import md.manastirli.reservation.model.Amenity;
 import md.manastirli.reservation.services.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/room")
@@ -27,18 +35,21 @@ public class RoomController {
         roomService.addRoom(roomRequest);
     }
 
-    @GetMapping
+    @GetMapping("/all")
     @ResponseStatus(HttpStatus.OK)
-    public List<RoomResponse> getAllRooms() {
+    public List<RoomResponse> getAllRooms() throws SQLException {
         return roomService.getAllRooms();
     }
+
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<RoomResponse> getAllAvailableRooms(@RequestParam LocalDate startDate,
-                                                   @RequestParam LocalDate endDate) {
-        return roomService.getAllAvailableRooms();
+                                                   @RequestParam LocalDate endDate,
+    @RequestParam(value = "amenities", required = false) Optional<List<Amenity>> optionalAmenities ) throws SQLException {
+        return roomService.getAllAvailableRooms(startDate, endDate, optionalAmenities);
     }
+
     @DeleteMapping("/{roomId}")
     public ResponseEntity<?> removeRoom(@PathVariable Long roomId) {
         roomService.deleteRoom(roomId);
@@ -48,7 +59,7 @@ public class RoomController {
     @PutMapping("/{roomId}")
     @ResponseStatus(HttpStatus.OK)
     public void updateRoom(@PathVariable Long roomId,
-            @RequestBody RoomUpdateRequest request) {
+            @RequestBody RoomUpdateRequest request) throws InternalServerException {
         roomService.updateRoom(roomId, request);
     }
 
@@ -64,16 +75,5 @@ public class RoomController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{roomId}/photos/{photoId}")
-    public ResponseEntity<?> addPhotoToRoom(@PathVariable Long roomId, @PathVariable Long photoId) {
-        roomService.addPhotoToRoom(roomId, photoId);
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping("/{roomId}/photos/{photoId}")
-    public ResponseEntity<?> removePhotoFromRoom(@PathVariable Long roomId, @PathVariable Long photoId) {
-        roomService.removePhotoFromRoom(roomId, photoId);
-        return ResponseEntity.ok().build();
-    }
 
 }
