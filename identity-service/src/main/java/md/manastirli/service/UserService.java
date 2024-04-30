@@ -7,7 +7,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import md.manastirli.entity.User;
-import md.manastirli.entity.Role;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -87,4 +86,6 @@ public class UserService {
         user.setRole(Role.ROLE_ADMIN);
         save(user);
     }
+
+
 }

@@ -11,12 +11,12 @@ public interface ReservationRepository extends JpaRepository<Reservation,Long> {
 
     List<Reservation> findAllByCheckInDateLessThanEqualAndCheckOutDateGreaterThanEqual(LocalDate endDate, LocalDate startDate);
 
-    List<Reservation> findAllByRoomNumber(Integer roomNumber);
-
-    List<Reservation> findAllByGuestName(String guestName);
-    @Query("SELECT r FROM Reservation r WHERE r.roomNumber = :roomNumber " +
+    @Query("SELECT r FROM Reservation r WHERE r.roomId = :roomId " +
             "AND ((r.checkInDate >= :checkInDate AND r.checkInDate < :checkOutDate) " +
             "OR (r.checkOutDate > :checkInDate AND r.checkOutDate <= :checkOutDate))")
-    List<Reservation> findConflictingReservations(int roomNumber, LocalDate checkInDate, LocalDate checkOutDate);
+    List<Reservation> findConflictingReservations(int roomId, LocalDate checkInDate, LocalDate checkOutDate);
 
+    List<Reservation> findAllByRoomId(Integer integer);
+
+    List<Reservation> findAllByUserName(String s);
 }

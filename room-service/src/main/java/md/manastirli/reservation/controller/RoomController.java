@@ -1,25 +1,21 @@
 package md.manastirli.reservation.controller;
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
-import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import md.manastirli.reservation.dto.RoomRequest;
 import md.manastirli.reservation.dto.RoomResponse;
 import md.manastirli.reservation.dto.RoomUpdateRequest;
 import md.manastirli.reservation.exceptions.InternalServerException;
-import md.manastirli.reservation.model.Amenity;
 import md.manastirli.reservation.services.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/room")
@@ -31,8 +27,14 @@ public class RoomController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void addRoom(@RequestBody RoomRequest roomRequest){
-        roomService.addRoom(roomRequest);
+    public void addRoom(@RequestBody RoomRequest roomRequest, @RequestParam MultipartFile photo){
+        roomService.addRoom(roomRequest, photo);
+    }
+
+    @GetMapping("/{roomId}")
+    public ResponseEntity<Optional<RoomResponse>> getRoomById(@PathVariable Long roomId) throws SQLException {
+        RoomResponse theRoom = roomService.getRoomById(roomId);
+        return  ResponseEntity.ok(Optional.of(theRoom));
     }
 
     @GetMapping("/all")
@@ -41,13 +43,18 @@ public class RoomController {
         return roomService.getAllRooms();
     }
 
+    @GetMapping("/types")
+    public List<String> getRoomTypes() {
+        return roomService.getAllRoomTypes();
+    }
 
-    @GetMapping
+
+    @GetMapping("/availableRooms")
     @ResponseStatus(HttpStatus.OK)
-    public List<RoomResponse> getAllAvailableRooms(@RequestParam LocalDate startDate,
-                                                   @RequestParam LocalDate endDate,
-    @RequestParam(value = "amenities", required = false) Optional<List<Amenity>> optionalAmenities ) throws SQLException {
-        return roomService.getAllAvailableRooms(startDate, endDate, optionalAmenities);
+    public List<RoomResponse> getAllAvailableRooms(@RequestParam LocalDate checkInDate,
+                                                   @RequestParam LocalDate checkOutDate,
+                                                   @RequestParam String roomType) throws SQLException {
+        return roomService.getAllAvailableRooms(checkInDate, checkOutDate, roomType);
     }
 
     @DeleteMapping("/{roomId}")
@@ -63,17 +70,12 @@ public class RoomController {
         roomService.updateRoom(roomId, request);
     }
 
-    @PostMapping("/{roomId}/amenities/{amenityId}")
-    public ResponseEntity<?> addAmenityToRoom(@PathVariable Long roomId, @PathVariable Long amenityId) {
-        roomService.addAmenityToRoom(roomId, amenityId);
-        return ResponseEntity.ok().build();
-    }
+//    @PostMapping("/{roomId}/amenities/{TypeId}")
+//    public ResponseEntity<?> addTypeToRoom(@PathVariable Long roomId, @PathVariable Long TypeId) {
+//        roomService.addTypeToRoom(roomId, TypeId);
+//        return ResponseEntity.ok().build();
+//    }
 
-    @DeleteMapping("/{roomId}/amenities/{amenityId}")
-    public ResponseEntity<?> removeAmenityFromRoom(@PathVariable Long roomId, @PathVariable Long amenityId) {
-        roomService.removeAmenityFromRoom(roomId, amenityId);
-        return ResponseEntity.ok().build();
-    }
 
 
 }

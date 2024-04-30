@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.sql.Blob;
-import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -21,32 +20,11 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     private int number;
-    private RoomType type;
     private int capacity;
     private BigDecimal pricePerNight;
     private String description;
-    @ManyToMany
-    @JoinTable(
-            name = "room_amenity",
-            joinColumns = @JoinColumn(name = "room_id"),
-            inverseJoinColumns = @JoinColumn(name = "amenity_id")
-    )
-    private List<Amenity> amenities;
-    private RoomStatus status;
+    private String roomType;
     @Lob
     private Blob photo;
-
-
-    public enum RoomType {
-            STANDARD,
-            LUXURY,
-            APARTMENT
-        }
-
-        public enum RoomStatus {
-            AVAILABLE,
-            OCCUPIED,
-            BEING_CLEANED
-        }
-
 }
+

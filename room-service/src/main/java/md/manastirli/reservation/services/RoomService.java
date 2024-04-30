@@ -6,12 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import md.manastirli.reservation.dto.RoomRequest;
 import md.manastirli.reservation.dto.RoomResponse;
 import md.manastirli.reservation.dto.RoomUpdateRequest;
-import md.manastirli.reservation.exceptions.BadRequestException;
 import md.manastirli.reservation.exceptions.InternalServerException;
 import md.manastirli.reservation.exceptions.NotFoundException;
-import md.manastirli.reservation.model.Amenity;
 import md.manastirli.reservation.model.Room;
-import md.manastirli.reservation.repository.AmenityRepository;
 import md.manastirli.reservation.repository.RoomRepository;
 import org.apache.commons.codec.binary.Base64;
 import org.springframework.core.ParameterizedTypeReference;
@@ -27,7 +24,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,24 +32,19 @@ import java.util.stream.Collectors;
 public class RoomService {
     private final RoomRepository roomRepository;
 
-    private final AmenityRepository amenityRepository;
-
     private final WebClient.Builder webClientBuilder;
 
-    public void addRoom(RoomRequest roomRequest){
+    public void addRoom(RoomRequest roomRequest, MultipartFile photo){
         Room room = Room.builder()
                 .number(roomRequest.getNumber())
-                .type(roomRequest.getType())
+                .roomType(roomRequest.getRoomType())
                 .capacity(roomRequest.getCapacity())
                 .pricePerNight(roomRequest.getPricePerNight())
                 .description(roomRequest.getDescription())
-                .amenities(roomRequest.getAmenities())
                 .build();
-
-        MultipartFile photoFile = roomRequest.getPhoto();
-        if (photoFile != null && !photoFile.isEmpty()) {
+        if (photo != null && !photo.isEmpty()) {
             try {
-                byte[] photoBytes = photoFile.getBytes();
+                byte[] photoBytes = photo.getBytes();
                 Blob photoBlob = new SerialBlob(photoBytes);
                 room.setPhoto(photoBlob);
             } catch (IOException | SQLException e) {
@@ -88,44 +79,15 @@ public class RoomService {
             }
         }
         return RoomResponse.builder()
+                .id(room.getId())
                 .number(room.getNumber())
-                .type(room.getType())
+                .roomType(room.getRoomType())
                 .capacity(room.getCapacity())
                 .pricePerNight(room.getPricePerNight())
                 .description(room.getDescription())
-                .amenities(room.getAmenities())
                 .photo(base64Photo)
                 .build();
     }
-
-
-    public void addAmenityToRoom(Long roomId, Long amenityId) {
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new NotFoundException("Room not found with id: " + roomId));
-
-        Amenity amenity = amenityRepository.findById(amenityId)
-                .orElseThrow(() -> new NotFoundException("Amenity not found with id: " + amenityId));
-
-        if (room.getAmenities().contains(amenity)) {
-            throw new BadRequestException("Amenity is already added to the room.");
-        }
-        room.getAmenities().add(amenity);
-        roomRepository.save(room);
-    }
-
-    public void removeAmenityFromRoom(Long roomId, Long amenityId) {
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new NotFoundException("Room not found with id: " + roomId));
-
-        Amenity amenity = amenityRepository.findById(amenityId)
-                .orElseThrow(() -> new NotFoundException("Amenity not found with id: " + amenityId));
-        if (room.getAmenities().contains(amenity)) {
-            room.getAmenities().remove(amenity);
-            log.info("Amenity with id: " + amenity.getId() + " was successfully removed from room!");
-        }
-        roomRepository.save(room);
-    }
-
     public void deleteRoom(Long roomId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found with id: " + roomId));
@@ -143,15 +105,8 @@ public class RoomService {
         if (request.getDescription() != null) {
             room.setDescription(request.getDescription());
         }
-        if (request.getType() != null) {
-            room.setType(request.getType());
-        }
-        if (request.getAmenities() != null) {
-            List<Amenity> amenities = amenityRepository.findAllById(request.getAmenities()
-                    .stream()
-                    .map(Amenity::getId)
-                    .collect(Collectors.toList()));
-            room.setAmenities(amenities);
+        if (request.getRoomType() != null) {
+            room.setRoomType(request.getRoomType());
         }
         if (request.getPhoto() != null) {
             try {
@@ -165,31 +120,28 @@ public class RoomService {
         roomRepository.save(room);
     }
 
-    public List<RoomResponse> getAllAvailableRooms(LocalDate startDate, LocalDate endDate, Optional<List<Amenity>> amenities) throws SQLException {
+    public List<RoomResponse> getAllAvailableRooms(LocalDate startDate, LocalDate endDate, String roomType) throws SQLException {
         List<Room> rooms = roomRepository.findAll();
-        List<Integer> occupiedRoomNumbers = webClientBuilder.build().get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("http://reservation-service/api/reservation")
-                        .queryParam("startDate", startDate)
-                        .queryParam("endDate", endDate)
-                        .build())
+        List<Long> occupiedRoomNumbers = webClientBuilder.build()
+                .get()
+                .uri("http://reservation-service/api/reservation/dateReservations?startDate={startDate}&endDate={endDate}"
+                        , startDate, endDate)
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<Integer>>() {})
+                .bodyToMono(new ParameterizedTypeReference<List<Long>>() {
+                })
                 .block();
 
-        List<Room> availableRooms = rooms.stream()
-                .filter(room -> {
-                    assert occupiedRoomNumbers != null;
-                    return !occupiedRoomNumbers.contains(room.getNumber());
-                })
-                .filter(room -> {
-                    if (amenities.isPresent()) {
-                        return room.getAmenities().containsAll(amenities.get());
-                    } else {
-                        return true;
-                    }
-                })
-                .toList();
+        List<Room> availableRooms;
+
+        if (occupiedRoomNumbers == null) {
+            availableRooms = rooms;
+        } else {
+            availableRooms = rooms.stream()
+                    .filter(room -> !occupiedRoomNumbers.contains(room.getId()))
+                    .filter(room -> room.getRoomType().equals(roomType))
+                    .collect(Collectors.toList());
+        }
+
         List<RoomResponse> collect = new ArrayList<>();
         for (Room availableRoom : availableRooms) {
             RoomResponse roomResponse = mapToRoomResponse(availableRoom);
@@ -199,5 +151,12 @@ public class RoomService {
     }
 
 
+    public List<String> getAllRoomTypes() {
+      return roomRepository.findDistinctRoomTypes();
+    }
 
+    public RoomResponse getRoomById(Long roomId) throws SQLException {
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("Room not found"));
+        return mapToRoomResponse(room);
+    }
 }

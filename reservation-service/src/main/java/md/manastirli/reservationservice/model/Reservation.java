@@ -31,13 +31,13 @@ public class Reservation {
 
     private String contactInformation;
 
-    @Enumerated(EnumType.STRING)
-    private ReservationStatus status;
+//    @Enumerated(EnumType.STRING)
+//    private ReservationStatus status;
 
-    private int roomNumber;
-    public enum ReservationStatus {
-        NEW,
-        CONFIRMED,
-        CANCELLED
-    }
+    private int roomId;
+//    public enum ReservationStatus {
+//        NEW,
+//        CONFIRMED,
+//        CANCELLED
+//    }
 }

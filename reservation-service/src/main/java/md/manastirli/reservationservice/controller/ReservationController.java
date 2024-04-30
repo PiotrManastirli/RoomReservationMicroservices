@@ -28,7 +28,7 @@ public class ReservationController {
 
 
 
-    @GetMapping("dateReservations")
+    @GetMapping("/dateReservations")
     @ResponseStatus(HttpStatus.OK)
     public List<Integer> getAllReservationsForRequestedDates
             (@RequestParam LocalDate startDate,
@@ -38,23 +38,24 @@ public class ReservationController {
 
     @GetMapping()
     public List<Reservation> fetchReservations(
-            @RequestParam(value = "room_number", required = false) Optional<Integer> optionalRoomNumber,
-            @RequestParam(value = "guest_name", required = false) Optional<String> optionalGuestName){
-        return reservationService.getReservation(optionalRoomNumber, optionalGuestName);
+            @RequestParam(value = "roomId", required = false) Optional<Integer> optionalRoomId,
+            @RequestParam(value = "userName", required = false) Optional<String> optionalUserName){
+        return reservationService.getReservation(optionalRoomId, optionalUserName);
     }
 
 
-    @PostMapping
-    @CircuitBreaker(name = "inventory",fallbackMethod = "fallbackMethod")
-    @TimeLimiter(name = "inventory")
-    @Retry(name = "inventory")
-    public CompletableFuture<String> placeReservation(@RequestBody ReservationRequest reservationRequest) {
-        return CompletableFuture.supplyAsync(()->reservationService.placeReservation(reservationRequest));
+    @PostMapping("/{roomId}")
+//    @CircuitBreaker(name = "inventory",fallbackMethod = "fallbackMethod")
+//    @TimeLimiter(name = "inventory")
+//    @Retry(name = "inventory")
+    public String placeReservation(@PathVariable int roomId,
+                                   @RequestBody ReservationRequest reservationRequest) {
+        return reservationService.placeReservation(roomId,reservationRequest);
     }
 
-    public CompletableFuture<String> fallbackMethod(ReservationRequest reservationRequest, RuntimeException runtimeException){
-        return CompletableFuture.supplyAsync(()->"Oops! Something went wrong, please add reservation after some time!");
-    }
+//    public CompletableFuture<String> fallbackMethod(ReservationRequest reservationRequest, RuntimeException runtimeException){
+//        return CompletableFuture.supplyAsync(()->"Oops! Something went wrong, please add reservation after some time!");
+//    }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.OK)

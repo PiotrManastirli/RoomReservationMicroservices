@@ -72,4 +72,6 @@ public class AuthConfig {
             throws Exception {
         return config.getAuthenticationManager();
     }
+
+
 }

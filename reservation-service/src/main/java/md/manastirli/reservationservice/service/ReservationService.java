@@ -32,9 +32,9 @@ public class ReservationService {
     private final Tracer tracer;
     private final KafkaTemplate<String,ReservationPlacedEvent> kafkaTemplate;
 
-    public String placeReservation(ReservationRequest reservationRequest) {
+    public String placeReservation(int roomId,ReservationRequest reservationRequest) {
         List<Reservation> conflictingReservations = reservationRepository.findConflictingReservations(
-                reservationRequest.getRoomNumber(), reservationRequest.getCheckInDate(), reservationRequest.getCheckOutDate());
+                roomId, reservationRequest.getCheckInDate(), reservationRequest.getCheckOutDate());
         if (!conflictingReservations.isEmpty()) {
             throw new RuntimeException("Room is not available for the specified dates");
         }
@@ -44,8 +44,8 @@ public class ReservationService {
         reservation.setNumberOfGuests(reservationRequest.getNumberOfGuests());
         reservation.setGuestName(reservationRequest.getGuestName());
         reservation.setContactInformation(reservationRequest.getContactInformation());
-        reservation.setStatus(reservationRequest.getStatus());
-        reservation.setRoomNumber(reservationRequest.getRoomNumber());
+        reservation.setRoomId(roomId);
+        reservation.setUserName(reservationRequest.getUserName());
 //        reservation.setUserName();
         reservationRepository.save(reservation);
         kafkaTemplate.send("notificationTopic",new ReservationPlacedEvent(reservation.getId()));
@@ -67,10 +67,10 @@ public class ReservationService {
     public void updateReservation(Long reservationId, ReservationUpdateRequest request) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new NotFoundException("Reservation not found with id: " + reservationId));
-        if (!isRoomAvailable(reservation.getRoomNumber(), request.getCheckInDate(), request.getCheckOutDate())) {
+        if (!isRoomAvailable(reservation.getRoomId(), request.getCheckInDate(), request.getCheckOutDate())) {
             throw new BadRequestException("Room is not available for the requested dates.");
         }
-        if (!isNumberOfGuestsValid(reservation.getRoomNumber(), request.getNumberOfGuests())) {
+        if (!isNumberOfGuestsValid(reservation.getRoomId(), request.getNumberOfGuests())) {
             throw new BadRequestException("Number of guests exceeds room capacity.");
         }
         reservation.setCheckInDate(request.getCheckInDate());
@@ -106,15 +106,15 @@ public class ReservationService {
         List<Reservation> reservations = reservationRepository
                 .findAllByCheckInDateLessThanEqualAndCheckOutDateGreaterThanEqual(endDate, startDate);
         return reservations.stream()
-                .map(Reservation::getRoomNumber)
+                .map(Reservation::getRoomId)
                 .collect(Collectors.toList());
     }
 
-    public List<Reservation> getReservation(Optional<Integer> roomNumber, Optional<String> guestName) {
-        if (roomNumber.isPresent()) {
-            return reservationRepository.findAllByRoomNumber(roomNumber.get());
-        } else if (guestName.isPresent()) {
-            return reservationRepository.findAllByGuestName(guestName.get());
+    public List<Reservation> getReservation(Optional<Integer> roomId, Optional<String> userName) {
+        if (roomId.isPresent()) {
+            return reservationRepository.findAllByRoomId(roomId.get());
+        } else if (userName.isPresent()) {
+            return reservationRepository.findAllByUserName(userName.get());
         } else {
             return reservationRepository.findAll();
         }

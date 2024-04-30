@@ -1,47 +1,47 @@
 ---
 #version: '3.7'
 services:
-  ## MySQL Docker Compose Config
-  postgres-room:
-    container_name: postgres-room
-    image: postgres
-    environment:
-      POSTGRES_DB: room-service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-    expose:
-      - "5431"
-    ports:
-      - "5431:5431"
-    command: -p 5431
-
-  postgres-reservation:
-    container_name: postgres-reservation
-    image: postgres
-    environment:
-      POSTGRES_DB: reservation-service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-    expose:
-      - "5436"
-    ports:
-      - "5436:5436"
-    command: -p 5436
-    restart: unless-stopped
-
-  postgres-identity:
-    container_name: postgres-identity
-    image: postgres
-    environment:
-      POSTGRES_DB: identity-service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-    expose:
-      - "5435"
-    ports:
-      - "5435:5435"
-    command: -p 5435
-    restart: unless-stopped
+#  ## MySQL Docker Compose Config
+#  postgres-room:
+#    container_name: postgres-room
+#    image: postgres
+#    environment:
+#      POSTGRES_DB: room-service
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: root
+#    expose:
+#      - "5431"
+#    ports:
+#      - "5431:5431"
+#    command: -p 5431
+#
+#  postgres-reservation:
+#    container_name: postgres-reservation
+#    image: postgres
+#    environment:
+#      POSTGRES_DB: reservation-service
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: root
+#    expose:
+#      - "5436"
+#    ports:
+#      - "5436:5436"
+#    command: -p 5436
+#    restart: unless-stopped
+#
+#  postgres-identity:
+#    container_name: postgres-identity
+#    image: postgres
+#    environment:
+#      POSTGRES_DB: identity-service
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: root
+#    expose:
+#      - "5435"
+#    ports:
+#      - "5435:5435"
+#    command: -p 5435
+#    restart: unless-stopped
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
@@ -75,95 +75,95 @@ services:
     ports:
       - "9411:9411"
 
-  ## Eureka Server
-  discovery-server:
-    build:
-      context: ./discovery-server
-      dockerfile: Dockerfile
-    container_name: discovery-server
-    ports:
-      - "8761:8761"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    depends_on:
-      - zipkin
-
-  api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
-    image: piotrmanastirli/api-gateway:latest
-    container_name: api-gateway
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY= TRACE
-    depends_on:
-      - zipkin
-      - discovery-server
-
-  ## Room-Service Docker Compose Config
-  room-service:
-    build:
-      context: ./room-service
-      dockerfile: Dockerfile
-    container_name: room-service
-    image: piotrmanastirli/room-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-room:5431/room-service
-    depends_on:
-      - postgres-room
-      - zipkin
-      - discovery-server
-      - api-gateway
-
-  ## Reservation-Service Docker Compose Config
-  reservation-service:
-    container_name: reservation-service
-    build:
-      context: ./reservation-service
-      dockerfile: Dockerfile
-    image: piotrmanastirli/reservation-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-reservation:5436/reservation-service
-    depends_on:
-      - postgres-reservation
-      - broker
-      - discovery-server
-      - api-gateway
-
-  ## Identity-Service Docker Compose Config
-  identity-service:
-    build:
-      context: ./identity-service
-      dockerfile: Dockerfile
-    container_name: identity-service
-    image: piotrmanastirli/identity-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-identity:5435/identity-service
-    depends_on:
-      - postgres-identity
-      - discovery-server
-      - api-gateway
-
-  ## Notification-Service Docker Compose Config
-  notification-service:
-    build:
-      context: ./notification-service
-      dockerfile: Dockerfile
-    container_name: notification-service
-    image: piotrmanastirli/notification-service:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    depends_on:
-      - zipkin
-      - broker
-      - discovery-server
-      - api-gateway
+#  ## Eureka Server
+#  discovery-server:
+#    build:
+#      context: ./discovery-server
+#      dockerfile: Dockerfile
+#    container_name: discovery-server
+#    ports:
+#      - "8761:8761"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    depends_on:
+#      - zipkin
+#
+#  api-gateway:
+#    build:
+#      context: ./api-gateway
+#      dockerfile: Dockerfile
+#    image: piotrmanastirli/api-gateway:latest
+#    container_name: api-gateway
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY= TRACE
+#    depends_on:
+#      - zipkin
+#      - discovery-server
+#
+#  ## Room-Service Docker Compose Config
+#  room-service:
+#    build:
+#      context: ./room-service
+#      dockerfile: Dockerfile
+#    container_name: room-service
+#    image: piotrmanastirli/room-service:latest
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-room:5431/room-service
+#    depends_on:
+#      - postgres-room
+#      - zipkin
+#      - discovery-server
+#      - api-gateway
+#
+#  ## Reservation-Service Docker Compose Config
+#  reservation-service:
+#    container_name: reservation-service
+#    build:
+#      context: ./reservation-service
+#      dockerfile: Dockerfile
+#    image: piotrmanastirli/reservation-service:latest
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-reservation:5436/reservation-service
+#    depends_on:
+#      - postgres-reservation
+#      - broker
+#      - discovery-server
+#      - api-gateway
+#
+#  ## Identity-Service Docker Compose Config
+#  identity-service:
+#    build:
+#      context: ./identity-service
+#      dockerfile: Dockerfile
+#    container_name: identity-service
+#    image: piotrmanastirli/identity-service:latest
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-identity:5435/identity-service
+#    depends_on:
+#      - postgres-identity
+#      - discovery-server
+#      - api-gateway
+#
+#  ## Notification-Service Docker Compose Config
+#  notification-service:
+#    build:
+#      context: ./notification-service
+#      dockerfile: Dockerfile
+#    container_name: notification-service
+#    image: piotrmanastirli/notification-service:latest
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    depends_on:
+#      - zipkin
+#      - broker
+#      - discovery-server
+#      - api-gateway
 #
 #  ## Prometheus
 #  prometheus:

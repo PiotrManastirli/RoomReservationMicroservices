@@ -4,7 +4,6 @@ package md.manastirli.reservationservice.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import md.manastirli.reservationservice.model.Reservation;
 
 import java.time.LocalDate;
 
@@ -22,7 +21,9 @@ public class ReservationRequest {
 
     private String contactInformation;
 
-    private Reservation.ReservationStatus status;
+    private String userName;
 
-    private int roomNumber;
+//    private Reservation.ReservationStatus status;
+
+//    private int roomId;
 }
