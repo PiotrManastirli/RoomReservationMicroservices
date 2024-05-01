@@ -9,38 +9,37 @@ import java.util.function.Predicate;
 @Component
 public class RouteValidator {
 
-    // Define endpoints for admin and regular users
-    public static final List<String> adminEndpoints = List.of("/admin/**");
-    public static final List<String> userEndpoints = List.of("/user/**");
-
-    // Open API endpoints that do not require any security
-    public static final List<String> openApiEndpoints = List.of(
-            "/auth/register", "/auth/token", "/eureka", "/public/**"
+    public static final List<String> adminEndpoints = List.of(
+            "/admin/**"
     );
 
-    // Predicate to determine if a request path requires security checks
-    public Predicate<ServerHttpRequest> isSecured = request -> {
-        String path = request.getURI().getPath();
-        // If the path is one of the open or public APIs, do not secure
-        if (isOpenApiPath(path)) {
-            return false;
-        }
-        // Otherwise, secure all admin and user endpoints accordingly
-        return isAdminPath(path) || isUserPath(path);
-    };
+    public static final List<String> userEndpoints = List.of(
+            "/user/**"
+    );
 
-    // Helper method to check if a path is an admin path
+    public static final List<String> openApiEndpoints = List.of(
+            "/auth/register",
+            "/auth/token",
+            "/eureka"
+    );
+
+    public Predicate<ServerHttpRequest> isSecured =
+            request -> {
+                String path = request.getURI().getPath();
+                if (isAdminPath(path)) {
+                    return request.getHeaders().containsKey("role") && request.getHeaders().get("role").contains("ROLE_ADMIN");
+                } else if (isUserPath(path)) {
+                    return request.getHeaders().containsKey("role") && (request.getHeaders().get("role").contains("ROLE_USER") || request.getHeaders().get("role").contains("ROLE_ADMIN"));
+                } else {
+                    return openApiEndpoints.stream().noneMatch(path::contains);
+                }
+            };
+
     private boolean isAdminPath(String path) {
-        return adminEndpoints.stream().anyMatch(path::startsWith);
+        return adminEndpoints.stream().anyMatch(path::contains);
     }
 
-    // Helper method to check if a path is a user path
     private boolean isUserPath(String path) {
-        return userEndpoints.stream().anyMatch(path::startsWith);
-    }
-
-    // Helper method to check if a path is one of the open API paths
-    private boolean isOpenApiPath(String path) {
-        return openApiEndpoints.stream().anyMatch(path::startsWith);
+        return userEndpoints.stream().anyMatch(path::contains);
     }
 }

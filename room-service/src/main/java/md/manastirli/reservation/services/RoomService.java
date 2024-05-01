@@ -96,7 +96,7 @@ public class RoomService {
         log.info("room with id: " + room.getId() + " was successfully removed from room!");
     }
     @Transactional
-    public void updateRoom(Long roomId, RoomUpdateRequest request) throws InternalServerException {
+    public void updateRoom(Long roomId, RoomUpdateRequest request, MultipartFile photo) throws InternalServerException {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new EntityNotFoundException("Room not found"));
         if (request.getPricePerNight() != null) {
@@ -108,9 +108,9 @@ public class RoomService {
         if (request.getRoomType() != null) {
             room.setRoomType(request.getRoomType());
         }
-        if (request.getPhoto() != null) {
+        if (photo != null) {
             try {
-                byte[] photoBytes = request.getPhoto().getBytes();
+                byte[] photoBytes = photo.getBytes();
                 Blob photoBlob = new SerialBlob(photoBytes);
                 room.setPhoto(photoBlob);
             } catch (IOException | SQLException ex) {

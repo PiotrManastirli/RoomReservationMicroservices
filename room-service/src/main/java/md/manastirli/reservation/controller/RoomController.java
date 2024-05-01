@@ -27,7 +27,7 @@ public class RoomController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void addRoom(@RequestBody RoomRequest roomRequest, @RequestParam MultipartFile photo){
+    public void addRoom(@ModelAttribute RoomRequest roomRequest, @RequestParam("photo") MultipartFile photo) {
         roomService.addRoom(roomRequest, photo);
     }
 
@@ -66,16 +66,9 @@ public class RoomController {
     @PutMapping("/{roomId}")
     @ResponseStatus(HttpStatus.OK)
     public void updateRoom(@PathVariable Long roomId,
-            @RequestBody RoomUpdateRequest request) throws InternalServerException {
-        roomService.updateRoom(roomId, request);
+                           @RequestPart("room") RoomUpdateRequest request,
+                           @RequestPart(value = "photo", required = false) MultipartFile photo)
+            throws InternalServerException {
+        roomService.updateRoom(roomId, request, photo);
     }
-
-//    @PostMapping("/{roomId}/amenities/{TypeId}")
-//    public ResponseEntity<?> addTypeToRoom(@PathVariable Long roomId, @PathVariable Long TypeId) {
-//        roomService.addTypeToRoom(roomId, TypeId);
-//        return ResponseEntity.ok().build();
-//    }
-
-
-
 }
